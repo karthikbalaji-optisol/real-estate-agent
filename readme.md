@@ -49,8 +49,7 @@ The system utilizes an event-driven microservices architecture orchestrated with
    ```
 3. The platform will initialize the database, create the necessary Kafka topics via an initializer container, and start all application services.
 
-### Adding and Managing Email Accounts (No more JSON configs)
-Unlike older versions of this tool, **we no longer use `email_accounts.json` or local JSON files**.
+### Adding and Managing Email Accounts
 To add an email account for monitoring:
 1. Open the **Frontend App** at `http://localhost:8080`.
 2. Navigate to the Email Manager page.
