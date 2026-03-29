@@ -4,6 +4,8 @@ Kafka consumer for `email.check.trigger` topic.
 When the NestJS API publishes a manual trigger event, this consumer
 performs an immediate one-time scan of all enabled email accounts.
 Every step is logged to the `manual_trigger_logs` table keyed by request_id.
+
+Supports both password-based and OAuth2 (XOAUTH2) authentication.
 """
 
 from __future__ import annotations
@@ -174,7 +176,7 @@ class EmailCheckTriggerConsumer:
         accounts_ok = 0
 
         for account in accounts:
-            db.log(request_id, f'Checking account: {account.email}')
+            db.log(request_id, f'Checking account: {account.email} (auth: {account.auth_method})')
             try:
                 parsed_emails = await asyncio.to_thread(
                     self._fetch_unseen, account, request_id
@@ -234,8 +236,15 @@ class EmailCheckTriggerConsumer:
 
         client = IMAPClient(account.imap_server, ssl=True)
         try:
-            client.login(account.email, account.password)
-            self._db.log(request_id, f'IMAP connected for {account.email}')
+            if account.auth_method == 'oauth' and account.oauth_access_token:
+                # XOAUTH2 authentication
+                auth_string = f'user={account.email}\x01auth=Bearer {account.oauth_access_token}\x01\x01'
+                client.authenticate('XOAUTH2', lambda _: auth_string.encode())
+                self._db.log(request_id, f'IMAP connected via OAuth for {account.email}')
+            else:
+                # Password-based login
+                client.login(account.email, account.password)
+                self._db.log(request_id, f'IMAP connected for {account.email}')
 
             for folder in folders:
                 try:

@@ -58,6 +58,10 @@ export function deleteEmail(id: string): Promise<void> {
   return request<void>(`/emails/${id}`, { method: 'DELETE' });
 }
 
+export function getOutlookAuthUrl(): string {
+  return `${BASE}/emails/outlook/auth`;
+}
+
 // --- Scraper / Manual Trigger ---
 
 export function triggerManualCheck(): Promise<ManualTrigger> {

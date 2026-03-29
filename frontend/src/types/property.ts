@@ -35,6 +35,7 @@ export interface EmailAccount {
   email: string;
   maskedPassword: string;
   provider: EmailProvider;
+  authMethod: 'password' | 'oauth';
   enabled: boolean;
   isValid: boolean | null;
   lastCheckedAt: string | null;

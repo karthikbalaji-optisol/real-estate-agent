@@ -24,6 +24,32 @@ CREATE TABLE IF NOT EXISTS emails (
   created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- OAuth support for emails
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'emails' AND column_name = 'auth_method'
+  ) THEN
+    ALTER TABLE emails ADD COLUMN auth_method VARCHAR NOT NULL DEFAULT 'password';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'emails' AND column_name = 'oauth_refresh_token'
+  ) THEN
+    ALTER TABLE emails ADD COLUMN oauth_refresh_token TEXT DEFAULT NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'emails' AND column_name = 'oauth_token_expires_at'
+  ) THEN
+    ALTER TABLE emails ADD COLUMN oauth_token_expires_at TIMESTAMPTZ DEFAULT NULL;
+  END IF;
+END
+$$;
+
 -- Properties
 CREATE TABLE IF NOT EXISTS properties (
   id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

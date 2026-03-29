@@ -20,6 +20,10 @@ export class EmailResponseDto {
   provider: string;
 
   @Expose()
+  @ApiProperty({ description: 'Authentication method: password or oauth' })
+  authMethod: string;
+
+  @Expose()
   @ApiProperty()
   enabled: boolean;
 

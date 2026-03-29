@@ -27,6 +27,11 @@ EMAIL_ENCRYPTION_KEY: str = os.getenv('EMAIL_ENCRYPTION_KEY', '')
 EMAIL_IDLE_TIMEOUT: int = int(os.getenv('EMAIL_IDLE_TIMEOUT', '300'))
 EMAIL_IDLE_RECONNECT_DELAY: int = int(os.getenv('EMAIL_IDLE_RECONNECT_DELAY', '30'))
 
+# Microsoft OAuth 2.0
+MS_OAUTH_CLIENT_ID: str = os.getenv('MS_OAUTH_CLIENT_ID', '')
+MS_OAUTH_CLIENT_SECRET: str = os.getenv('MS_OAUTH_CLIENT_SECRET', '')
+MS_OAUTH_TENANT_ID: str = os.getenv('MS_OAUTH_TENANT_ID', 'common')
+
 PROPERTY_SITES: list[str] = [
     'magicbricks', '99acres', 'housing',
     'squareyards', 'commonfloor', 'realestateportal',

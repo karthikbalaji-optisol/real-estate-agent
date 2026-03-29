@@ -3,11 +3,14 @@ IMAP IDLE listener — maintains a persistent IMAP connection per email account.
 
 When the mail server signals new mail, it fetches the message and passes
 it to the ExtractorService for classification and URL extraction.
+
+Supports both password-based login and OAuth2 XOAUTH2 authentication.
 """
 
 from __future__ import annotations
 
 import asyncio
+import base64
 import email as email_lib
 import re
 from email.message import Message
@@ -35,11 +38,13 @@ class ImapIdleListener:
     def __init__(
         self,
         email_user: str,
-        email_password: str,
+        email_password: str | None,
         imap_server: str,
         account_id: str,
         extractor,
         mailbox: str = 'INBOX',
+        auth_method: str = 'password',
+        oauth_access_token: str | None = None,
     ) -> None:
         self._email_user = email_user
         self._email_password = email_password
@@ -47,18 +52,33 @@ class ImapIdleListener:
         self._account_id = account_id
         self._extractor = extractor
         self._mailbox = mailbox
+        self._auth_method = auth_method
+        self._oauth_access_token = oauth_access_token
         self._client: IMAPClient | None = None
         self._running = True
 
     def _connect(self) -> None:
         self._client = IMAPClient(self._imap_server, ssl=True)
-        self._client.login(self._email_user, self._email_password)
+
+        if self._auth_method == 'oauth' and self._oauth_access_token:
+            # XOAUTH2 authentication for Outlook
+            auth_string = f'user={self._email_user}\x01auth=Bearer {self._oauth_access_token}\x01\x01'
+            self._client.authenticate('XOAUTH2', lambda _: auth_string.encode())
+            logger.info(
+                'IDLE listener connected via OAuth',
+                email=self._email_user,
+                mailbox=self._mailbox,
+            )
+        else:
+            # Standard password-based login
+            self._client.login(self._email_user, self._email_password)
+            logger.info(
+                'IDLE listener connected',
+                email=self._email_user,
+                mailbox=self._mailbox,
+            )
+
         self._client.select_folder(self._mailbox)
-        logger.info(
-            'IDLE listener connected',
-            email=self._email_user,
-            mailbox=self._mailbox,
-        )
 
     def _disconnect(self) -> None:
         if self._client:
@@ -136,6 +156,10 @@ class ImapIdleListener:
 
     def stop(self) -> None:
         self._running = False
+
+    def update_access_token(self, token: str) -> None:
+        """Update the OAuth access token (e.g. after refresh)."""
+        self._oauth_access_token = token
 
     @staticmethod
     def _extract_body(msg: Message) -> str:
