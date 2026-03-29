@@ -3,10 +3,10 @@ import type { EmailAccount, EmailProvider } from '../types/property';
 import { createEmail, deleteEmail, fetchEmails, toggleEmail } from '../api/propertyApi';
 import Spinner from '../components/ui/Spinner';
 
-const PROVIDERS: { value: EmailProvider; label: string }[] = [
-  { value: 'google', label: 'Google (Gmail)' },
-  { value: 'outlook', label: 'Outlook / Hotmail' },
-  { value: 'yahoo', label: 'Yahoo Mail' },
+const PROVIDERS: { value: EmailProvider; label: string; isDisabled: boolean }[] = [
+  { value: 'google', label:   'Google (Gmail)', isDisabled: false },
+  { value: 'outlook', label: 'Outlook / Hotmail', isDisabled: true },
+  { value: 'yahoo', label: 'Yahoo Mail', isDisabled: true },
 ];
 
 const providerLabel = (provider: string) =>
@@ -96,7 +96,7 @@ export default function EmailManagerPage() {
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           >
             {PROVIDERS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
+              <option key={p.value} value={p.value} disabled={p.isDisabled}>{p.label}</option>
             ))}
           </select>
         </div>
