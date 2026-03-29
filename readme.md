@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive, event-driven platform that actively monitors email accounts (via standard IMAP or Microsoft OAuth2), detects emails containing real estate property links, scrapes the property pages, structures the information using LLM models, and presents the data in a web dashboard with advanced reporting capabilities.
+A comprehensive, event-driven platform that actively monitors email accounts (via standard IMAP), detects emails containing real estate property links, scrapes the property pages, structures the information using LLM models, and presents the data in a web dashboard with advanced reporting capabilities.
 
 The project has evolved from a single-script pipeline into a robust microservices architecture.
 
@@ -12,16 +12,16 @@ The project has evolved from a single-script pipeline into a robust microservice
 
 The system utilizes an event-driven microservices architecture orchestrated with **Docker Compose**:
 
-- **Frontend (`/frontend`)**: React + TypeScript + Vite web application for viewing collected property listings, adding email accounts via Microsoft OAuth2, and viewing/downloading daily reports.
-- **Backend API (`/apps/api`)**: NestJS application managing database operations, user authentication, OAuth flow, and serving data to the frontend.
+- **Frontend (`/frontend`)**: React + TypeScript + Vite web application for viewing collected property listings, adding email accounts, and viewing/downloading daily reports.
+- **Backend API (`/apps/api`)**: NestJS application managing database operations, user authentication, and serving data to the frontend.
 - **Logger Service (`/apps/logger`)**: NestJS microservice handling centralized logging.
 - **Python Worker (`/python`)**: A background service that:
-  - Constantly monitors registered email inboxes (using `elsai-cloud` and Microsoft OAuth2 integrations).
+  - Constantly monitors registered email inboxes (using `elsai-cloud` integration).
   - Scrapes allowed property links (e.g., 99acres, Magicbricks, Housing.com, SquareYards).
   - Extracts and normalizes structured property data using LLMs (`elsai-model`).
 - **Infrastructure**:
   - **Kafka**: Message broker orchestrating events between services (`property.links`, `scrape.results`, `app.logs`, `email.check.trigger`).
-  - **PostgreSQL**: Relational database storing email credentials, OAuth tokens, property records, and system configurations.
+  - **PostgreSQL**: Relational database storing email credentials, property records, and system configurations.
   - **Redis**: Caching and managing background job queues.
 
 ## Tech Stack
@@ -43,7 +43,7 @@ The system utilizes an event-driven microservices architecture orchestrated with
 
 ### Running with Docker Compose
 
-1. Copy `.env.example` to `.env` in the root directory and populate it with your specific API keys, OAuth secrets, database credentials, and any required LLM configuration headers.
+1. Copy `.env.example` to `.env` in the root directory and populate it with your specific API keys, database credentials, and any required LLM configuration headers.
 2. Start the platform using Docker Compose:
    ```bash
    docker-compose up -d --build
@@ -55,7 +55,7 @@ Unlike older versions of this tool, **we no longer use `email_accounts.json` or 
 To add an email account for monitoring:
 1. Open the **Frontend App** at `http://localhost:8080`.
 2. Navigate to the Email Manager page.
-3. Add your email accounts dynamically (for example, using "Connect with Microsoft" for Outlook OAuth2). credentials and tokens are securely stored in the PostgreSQL database and immediately picked up by the backend workers.
+3. Add your email accounts dynamically (for example, using Gmail App Passwords). Credentials are securely stored in the PostgreSQL database and immediately picked up by the backend workers.
 
 ### Network Ports Layout
 When running via `docker-compose`, the following ports are mapped to your host:
@@ -68,8 +68,7 @@ When running via `docker-compose`, the following ports are mapped to your host:
 
 ## Key Features
 
-- **Dynamic Multi-Tenant Email Monitoring**: Actively tracks and processes unread (and targetted sent) emails across multiple user accounts dynamically loaded from the PostgreSQL database—all manageable via the UI.
-- **Microsoft OAuth2 Integration**: Securely connects with Outlook via Microsoft OAuth 2.0 (XOAUTH2) flow rather than relying on basic authentication app passwords.
+- **Email Monitoring**: Actively tracks and processes unread (and targetted sent) emails for Gmail accounts dynamically loaded from the PostgreSQL database—all manageable via the UI.
 - **Automated Property Scraping**: Gracefully handles real estate platforms (e.g., 99acres, SquareYards, Housing.com) to extract raw page text.
 - **AI-Powered Data Extraction**: Parses unstructured text using `elsai-model` to retrieve clean datasets containing BHK, bathrooms, exact pricing, location, and dimensions.
 - **Dashboard & Reporting**: User interface capabilities to observe scraping results globally or per user, and generate or download structured daily status reports.
