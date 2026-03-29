@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive, event-driven platform that actively monitors email accounts (via standard IMAP), detects emails containing real estate property links, scrapes the property pages, structures the information using LLM models, and presents the data in a web dashboard with advanced reporting capabilities.
+A comprehensive, event-driven platform that actively monitors email accounts (via standard IMAP), uses LLMs to identify real estate emails and extract property links, scrapes the property pages, structures the information via robust regex parsing, and presents the data in a web dashboard with advanced reporting capabilities.
 
 The project has evolved from a single-script pipeline into a robust microservices architecture.
 
@@ -17,8 +17,7 @@ The system utilizes an event-driven microservices architecture orchestrated with
 - **Logger Service (`/apps/logger`)**: NestJS microservice handling centralized logging.
 - **Python Worker (`/python`)**: A background service that:
   - Constantly monitors registered email inboxes (using `elsai-cloud` integration).
-  - Scrapes allowed property links (e.g., 99acres, Magicbricks, Housing.com, SquareYards).
-  - Extracts and normalizes structured property data using LLMs (`elsai-model`).
+  - Uses `elsai-model` (LLM) to intelligently classify real estate emails and extract property listing URLs.
 - **Infrastructure**:
   - **Kafka**: Message broker orchestrating events between services (`property.links`, `scrape.results`, `app.logs`, `email.check.trigger`).
   - **PostgreSQL**: Relational database storing email credentials, property records, and system configurations.
@@ -69,8 +68,8 @@ When running via `docker-compose`, the following ports are mapped to your host:
 ## Key Features
 
 - **Email Monitoring**: Actively tracks and processes unread (and targetted sent) emails for Gmail accounts dynamically loaded from the PostgreSQL database—all manageable via the UI.
-- **Automated Property Scraping**: Gracefully handles real estate platforms (e.g., 99acres, SquareYards, Housing.com) to extract raw page text.
-- **AI-Powered Data Extraction**: Parses unstructured text using `elsai-model` to retrieve clean datasets containing BHK, bathrooms, exact pricing, location, and dimensions.
+- **AI-Assisted Email Filtering & URL Extraction**: Parses incoming emails using `elsai-model` to reliably identify real-estate content and extract valid property URLs.
+- **Automated Property Scraping & Regex Extraction**: Gracefully handles real estate platforms (e.g., 99acres, SquareYards, Housing.com) to extract raw page text, which is then parsed using regular expressions on the NestJS backend to retrieve clean datasets containing BHK, bathrooms, and exact pricing.
 - **Dashboard & Reporting**: User interface capabilities to observe scraping results globally or per user, and generate or download structured daily status reports.
 
 ## Project Structure
