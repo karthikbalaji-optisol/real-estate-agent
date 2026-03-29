@@ -1,145 +1,90 @@
-# Real Estate Email Automation Agent
+# Real Estate Intelligence Platform
 
 ## Overview
 
-End-to-end pipeline that monitors IMAP mailboxes for real-estate-related messages, extracts listing URLs, scrapes pages with Playwright, structures fields with OpenAI, stores rows in PostgreSQL, and writes a same-day text report.
+A comprehensive, event-driven platform that actively monitors email accounts (via standard IMAP or Microsoft OAuth2), detects emails containing real estate property links, scrapes the property pages, structures the information using LLM models, and presents the data in a web dashboard with advanced reporting capabilities.
 
-## What it does
-
-1. Connects to accounts listed in `email_accounts.json` (see [Configuration](#configuration)).
-2. Reads **unseen** messages from **INBOX** and, for Gmail, attempts **Sent Mail** (`"[Gmail]/Sent Mail"`).
-3. **Classifies** messages: if the plain/HTML body contains `bhk` or `property` (case-insensitive), the message is treated as real estate; otherwise OpenAI (`gpt-4o-mini`) returns YES/NO.
-4. **Extracts URLs** from the body and keeps only links whose host/path mentions allowed property sites (see below).
-5. For each link: **scrapes** visible text with Chromium (Playwright), **extracts** JSON with OpenAI (`gpt-4o-mini`), **normalizes** numeric fields (BHK, bathrooms), **inserts** into PostgreSQL.
-
-`run_system.py` runs the monitor and then generates the daily report in one go.
+The project has evolved from a single-script pipeline into a robust microservices architecture.
 
 ## Architecture
 
-```text
-IMAP (unseen) → rule / LLM filter → link detection → Playwright scrape
-    → OpenAI JSON extraction → clean BHK & bathrooms → PostgreSQL
-run_system.py → daily report (DB query for today) → daily_report_YYYY-MM-DD.txt
-```
+![Platform Architecture](./image.png)
 
-## Tech stack
+The system utilizes an event-driven microservices architecture orchestrated with **Docker Compose**:
 
-| Area | Technology |
-|------|------------|
-| Email | Python `imaplib`, `email` |
-| Scraping | Playwright (Chromium), sync API |
-| Classification & extraction | OpenAI API (`gpt-4o-mini`) |
-| Database | PostgreSQL, `psycopg2` |
-| Orchestration | `run_system.py`, `Emails/monitor.py`, `main_pipeline.py` |
+- **Frontend (`/frontend`)**: React + TypeScript + Vite web application for viewing collected property listings, adding email accounts via Microsoft OAuth2, and viewing/downloading daily reports.
+- **Backend API (`/apps/api`)**: NestJS application managing database operations, user authentication, OAuth flow, and serving data to the frontend.
+- **Logger Service (`/apps/logger`)**: NestJS microservice handling centralized logging.
+- **Python Worker (`/python`)**: A background service that:
+  - Constantly monitors registered email inboxes (using `elsai-cloud` and Microsoft OAuth2 integrations).
+  - Scrapes allowed property links (e.g., 99acres, Magicbricks, Housing.com, SquareYards).
+  - Extracts and normalizes structured property data using LLMs (`elsai-model`).
+- **Infrastructure**:
+  - **Kafka**: Message broker orchestrating events between services (`property.links`, `scrape.results`, `app.logs`, `email.check.trigger`).
+  - **PostgreSQL**: Relational database storing email credentials, OAuth tokens, property records, and system configurations.
+  - **Redis**: Caching and managing background job queues.
 
-## Project structure
+## Tech Stack
+
+| Component | Technologies |
+| --- | --- |
+| **Frontend** | React, TypeScript, Vite |
+| **Backend** | Node.js, NestJS, TypeORM |
+| **Python Worker** | Python 3, `elsai-model`, `aiokafka`, `sqlalchemy`, `httpx` |
+| **Databases/Broker**| PostgreSQL, Redis, Apache Kafka |
+| **Deployment** | Docker, Docker Compose |
+
+## Environment Setup and Running
+
+### Prerequisites
+- Docker & Docker Compose installed on your system.
+- Node.js & npm (optional, for local frontend/backend dev instead of Docker).
+- Python 3.x (optional, for local worker dev).
+
+### Running with Docker Compose
+
+1. Copy `.env.example` to `.env` in the root directory and populate it with your specific API keys, OAuth secrets, database credentials, and any required LLM configuration headers.
+2. Start the platform using Docker Compose:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. The platform will initialize the database, create the necessary Kafka topics via an initializer container, and start all application services.
+
+### Adding and Managing Email Accounts (No more JSON configs)
+Unlike older versions of this tool, **we no longer use `email_accounts.json` or local JSON files**.
+To add an email account for monitoring:
+1. Open the **Frontend App** at `http://localhost:8080`.
+2. Navigate to the Email Manager page.
+3. Add your email accounts dynamically (for example, using "Connect with Microsoft" for Outlook OAuth2). credentials and tokens are securely stored in the PostgreSQL database and immediately picked up by the backend workers.
+
+### Network Ports Layout
+When running via `docker-compose`, the following ports are mapped to your host:
+- **Frontend App**: `http://localhost:8080`
+- **Main REST API**: `http://localhost:3000`
+- **Logger API**: `http://localhost:3001`
+- **PostgreSQL**: `5433`
+- **Redis**: `16379`
+- **Kafka**: `19092`
+
+## Key Features
+
+- **Dynamic Multi-Tenant Email Monitoring**: Actively tracks and processes unread (and targetted sent) emails across multiple user accounts dynamically loaded from the PostgreSQL database—all manageable via the UI.
+- **Microsoft OAuth2 Integration**: Securely connects with Outlook via Microsoft OAuth 2.0 (XOAUTH2) flow rather than relying on basic authentication app passwords.
+- **Automated Property Scraping**: Gracefully handles real estate platforms (e.g., 99acres, SquareYards, Housing.com) to extract raw page text.
+- **AI-Powered Data Extraction**: Parses unstructured text using `elsai-model` to retrieve clean datasets containing BHK, bathrooms, exact pricing, location, and dimensions.
+- **Dashboard & Reporting**: User interface capabilities to observe scraping results globally or per user, and generate or download structured daily status reports.
+
+## Project Structure
 
 ```text
 .
-├── Emails/
-│   └── monitor.py          # IMAP monitor, loads accounts, drives pipeline
-├── utils/
-│   ├── link_detector.py    # URL extraction + site allowlist
-│   └── email_classifier.py # OpenAI YES/NO when keyword shortcut does not apply
-├── scraper/
-│   └── playwright_scraper.py
-├── extractor/
-│   └── property_extractor.py
-├── database/
-│   ├── db_manager.py       # INSERT into properties
-│   └── test_db.py          # sample insert helper
-├── reporting/
-│   └── daily_report.py     # today’s rows → console + dated .txt file
-├── main_pipeline.py        # scrape → extract → clean → save_property
-├── run_system.py           # monitor + daily report
-├── email_accounts.json     # local credentials (gitignored; create your own)
-└── readme.md
+├── apps/
+│   ├── api/             # NestJS Primary Backend
+│   └── logger/          # NestJS Logging Microservice
+├── frontend/            # React/Vite web application
+├── libs/                # Shared internal libraries/modules
+├── python/              # Python application logic (Email Monitor, Extractor, LLM)
+├── scripts/             # Infrastructure scripts (e.g. init.sql for Postgres)
+├── docker-compose.yml   # Full system orchestration
+└── package.json         # Root package manager configuration
 ```
-
-## Property link allowlist
-
-`utils/link_detector.py` keeps URLs only if they contain one of these substrings (case-sensitive substring match on the full URL):
-
-- `magicbricks`
-- `99acres`
-- `housing`
-- `squareyards`
-- `commonfloor`
-- `realestateportal`
-
-## Data model (PostgreSQL)
-
-`database/db_manager.py` inserts into table `properties` with columns:
-
-`url`, `bhk`, `bathrooms`, `price`, `plot_area`, `built_up_area`, `location`, `facing`, `floors`
-
-The daily report expects a `created_at` column on `properties` (used to filter “today’s” rows). Ensure your table defines it (for example with a default of `now()` on insert).
-
-## Configuration
-
-### Email accounts
-
-Create `email_accounts.json` in the project root (this filename is in `.gitignore`). Each entry:
-
-```json
-[
-  {
-    "email": "you@example.com",
-    "password": "your-app-password",
-    "imap_server": "imap.gmail.com"
-  }
-]
-```
-
-Use an app password or provider-specific token where required; do not commit real secrets.
-
-### OpenAI
-
-Set the API key in the environment:
-
-```bash
-export OPENAI_API_KEY="sk-..."
-```
-
-### PostgreSQL
-
-Connection settings appear in **two** places today: `database/db_manager.py` and `reporting/daily_report.py` (`DB_CONFIG`). Align host, database name, user, password, and port in both before running.
-
-### Playwright
-
-The scraper launches Chromium with `headless=False` and uses a 60s navigation timeout plus a 5s wait after load. Adjust in `scraper/playwright_scraper.py` if you run headless on a server.
-
-## Setup and run
-
-There is no `requirements.txt` in this repo; install dependencies explicitly, for example:
-
-```bash
-pip install psycopg2-binary openai playwright
-playwright install chromium
-```
-
-From the repository root:
-
-```bash
-python run_system.py
-```
-
-Other entry points:
-
-- `python Emails/monitor.py` — email monitoring only  
-- `python reporting/daily_report.py` — report only (reads DB for current date)
-
-## Daily report output
-
-`reporting/daily_report.py` prints a short summary and writes `daily_report_<date>.txt` in the current working directory (that pattern is gitignored).
-
-## Security notes
-
-- Keep `email_accounts.json` out of version control (already listed in `.gitignore`).
-- Prefer environment variables or a secrets manager for DB credentials instead of hardcoding them in Python modules for anything beyond local development.
-
-## Limitations and follow-ups
-
-- DB credentials are duplicated between `db_manager.py` and `daily_report.py`.
-- Keyword shortcut may admit some non–real-estate mail if the body contains `property` in unrelated contexts.
-- Gmail Sent folder path may differ by locale/account; failures there are swallowed so INBOX still runs.
