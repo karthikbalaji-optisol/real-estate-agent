@@ -4,6 +4,9 @@ Kafka consumer for `email.check.trigger` topic.
 When the NestJS API publishes a manual trigger event, this consumer
 performs an immediate one-time scan of all enabled email accounts.
 Every step is logged to the `manual_trigger_logs` table keyed by request_id.
+
+For Sent folders, messages are automatically marked as read by the email
+provider, so we use a date-based search (SINCE today) instead of UNSEEN.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from sqlalchemy import create_engine, text
 from config import KAFKA_BROKER, DATABASE_URL
 from shared.log_producer import get_logger
 from modules.email_monitor.email_service import EmailService, EmailAccountInfo, PROVIDER_SENT_FOLDERS
-from modules.email_monitor.imap_listener import ParsedEmail
+from modules.email_monitor.imap_listener import ParsedEmail, _is_sent_folder
 from modules.extractor.extractor_service import ExtractorService
 
 logger = get_logger('TriggerConsumer')
@@ -227,7 +230,12 @@ class EmailCheckTriggerConsumer:
     def _fetch_unseen(
         self, account: EmailAccountInfo, request_id: str
     ) -> list[ParsedEmail]:
-        """Connect via IMAP, fetch unseen emails from INBOX + Sent, return parsed list."""
+        """Connect via IMAP, fetch new emails from INBOX + Sent, return parsed list.
+
+        For INBOX: searches for UNSEEN messages.
+        For Sent folders: searches by SINCE today's date, because sent items
+        are auto-marked as read by most providers and UNSEEN returns nothing.
+        """
         sent_folder = PROVIDER_SENT_FOLDERS.get(account.provider, 'Sent')
         folders = ['INBOX', sent_folder]
         results: list[ParsedEmail] = []
@@ -240,12 +248,23 @@ class EmailCheckTriggerConsumer:
             for folder in folders:
                 try:
                     client.select_folder(folder)
-                    uids = client.search(['UNSEEN'])
+                    is_sent = _is_sent_folder(folder)
 
-                    self._db.log(
-                        request_id,
-                        f'Folder "{folder}" — {len(uids)} unseen message(s)',
-                    )
+                    if is_sent:
+                        # Sent items are auto-marked as read.
+                        # Search by today's date to get current sent items.
+                        today = datetime.now(timezone.utc).strftime('%d-%b-%Y')
+                        uids = client.search(['SINCE', today])
+                        self._db.log(
+                            request_id,
+                            f'Folder "{folder}" — {len(uids)} message(s) sent since {today}',
+                        )
+                    else:
+                        uids = client.search(['UNSEEN'])
+                        self._db.log(
+                            request_id,
+                            f'Folder "{folder}" — {len(uids)} unseen message(s)',
+                        )
 
                     if not uids:
                         continue
