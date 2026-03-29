@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log Viewer — Real Estate Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #334155;
+      --text: #e2e8f0; --muted: #94a3b8;
+      --info: #38bdf8; --warn: #fbbf24; --error: #f87171; --debug: #a78bfa;
+    }
+    body { font-family: 'SF Mono', 'Fira Code', monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+    header { padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+    .filters select, .filters input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; font-family: inherit; }
+    .status { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    #log-container { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .log-row { display: flex; gap: 12px; padding: 4px 24px; font-size: 12px; line-height: 1.6; border-bottom: 1px solid rgba(51,65,85,.3); }
+    .log-row:hover { background: rgba(51,65,85,.25); }
+    .log-time { color: var(--muted); white-space: nowrap; min-width: 85px; }
+    .log-level { font-weight: 700; text-transform: uppercase; min-width: 50px; }
+    .log-level.info { color: var(--info); }
+    .log-level.warn { color: var(--warn); }
+    .log-level.error { color: var(--error); }
+    .log-level.debug { color: var(--debug); }
+    .log-svc { color: var(--muted); min-width: 80px; }
+    .log-ctx { color: #67e8f9; min-width: 140px; }
+    .log-msg { flex: 1; word-break: break-word; }
+    .empty { text-align: center; padding: 40px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Log Viewer</h1>
+    <div class="filters">
+      <select id="f-level"><option value="">All Levels</option><option>info</option><option>warn</option><option>error</option><option>debug</option></select>
+      <select id="f-service"><option value="">All Services</option><option>nestjs-api</option><option>python</option></select>
+      <input id="f-search" placeholder="Search messages…" />
+    </div>
+    <div class="status"><span class="dot"></span> Connected</div>
+  </header>
+  <div id="log-container"><div class="empty">Waiting for logs…</div></div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const container = document.getElementById('log-container');
+    const fLevel = document.getElementById('f-level');
+    const fService = document.getElementById('f-service');
+    const fSearch = document.getElementById('f-search');
+    let autoScroll = true;
+    let logs = [];
+
+    container.addEventListener('scroll', () => {
+      autoScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 40;
+    });
+
+    function render() {
+      const level = fLevel.value;
+      const service = fService.value;
+      const search = fSearch.value.toLowerCase();
+
+      const filtered = logs.filter(l =>
+        (!level || l.level === level) &&
+        (!service || l.service === service) &&
+        (!search || l.message.toLowerCase().includes(search) || l.context.toLowerCase().includes(search))
+      );
+
+      if (!filtered.length) {
+        container.innerHTML = '<div class="empty">No matching logs</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(l => {
+        const ts = new Date(l.timestamp).toLocaleTimeString();
+        return `<div class="log-row">
+          <span class="log-time">${ts}</span>
+          <span class="log-level ${l.level}">${l.level}</span>
+          <span class="log-svc">${l.service}</span>
+          <span class="log-ctx">${l.context}</span>
+          <span class="log-msg">${esc(l.message)}</span>
+        </div>`;
+      }).join('');
+
+      if (autoScroll) container.scrollTop = container.scrollHeight;
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    fLevel.addEventListener('change', render);
+    fService.addEventListener('change', render);
+    fSearch.addEventListener('input', render);
+
+    const socket = io('/logs-gateway');
+    socket.on('log', (entry) => {
+      logs.push(entry);
+      if (logs.length > 2000) logs = logs.slice(-1500);
+      render();
+    });
+    socket.on('connect', () => { document.querySelector('.status').innerHTML = '<span class="dot"></span> Connected'; });
+    socket.on('disconnect', () => { document.querySelector('.status').innerHTML = '<span class="dot" style="background:#ef4444;animation:none"></span> Disconnected'; });
+
+    fetch('/logs?limit=200')
+      .then(r => r.json())
+      .then(res => { logs = (res.data || []).reverse(); render(); })
+      .catch(() => {});
+  </script>
+</body>
+</html>

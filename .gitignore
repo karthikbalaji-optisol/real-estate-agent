@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build output
+dist/
+frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+python/.venv/
+
+# Environment
+.env
+email_accounts.json
+
+# Reports
+reports/
+daily_report*.txt
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# OS
+.DS_Store
