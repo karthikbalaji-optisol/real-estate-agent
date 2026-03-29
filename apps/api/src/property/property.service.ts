@@ -27,8 +27,9 @@ export class PropertyService {
     limit = 20,
     location?: string,
     bhk?: number,
+    date?: string,
   ): Promise<PaginatedPropertyResponseDto> {
-    const cacheKey = `properties:list:${page}:${limit}:${location ?? ''}:${bhk ?? ''}`;
+    const cacheKey = `properties:list:${page}:${limit}:${location ?? ''}:${bhk ?? ''}:${date ?? ''}`;
     const cached =
       await this.cache.get<PaginatedPropertyResponseDto>(cacheKey);
     if (cached) return cached;
@@ -36,6 +37,11 @@ export class PropertyService {
     const qb = this.propertyRepo.createQueryBuilder('p');
     if (location) qb.andWhere('p.location = :location', { location });
     if (bhk != null) qb.andWhere('p.bhk = :bhk', { bhk });
+    if (date) {
+      const startOfDay = new Date(`${date}T00:00:00.000Z`);
+      const endOfDay = new Date(`${date}T23:59:59.999Z`);
+      qb.andWhere('p.created_at BETWEEN :start AND :end', { start: startOfDay, end: endOfDay });
+    }
 
     const [data, total] = await qb
       .orderBy('p.created_at', 'DESC')

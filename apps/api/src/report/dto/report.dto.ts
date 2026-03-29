@@ -20,4 +20,7 @@ export class ReportResponseDto {
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiPropertyOptional()
+  content?: string;
 }

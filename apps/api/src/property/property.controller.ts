@@ -30,11 +30,13 @@ export class PropertyController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'location', required: false, type: String })
   @ApiQuery({ name: 'bhk', required: false, type: Number })
+  @ApiQuery({ name: 'date', required: false, type: String })
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('location') location?: string,
     @Query('bhk') bhk?: number,
+    @Query('date') date?: string,
   ): Promise<PaginatedPropertyResponseDto> {
     const parsedBhk = bhk != null ? Number(bhk) : undefined;
     return this.propertyService.findAll(
@@ -42,6 +44,7 @@ export class PropertyController {
       limit ? +limit : 20,
       location,
       Number.isFinite(parsedBhk) ? parsedBhk : undefined,
+      date,
     );
   }
 

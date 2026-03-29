@@ -46,6 +46,7 @@ export interface Report {
   name: string;
   type: string;
   createdAt: string;
+  content?: string;
 }
 
 export interface DashboardStats {

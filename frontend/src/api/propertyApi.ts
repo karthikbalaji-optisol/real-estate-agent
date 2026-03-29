@@ -78,6 +78,10 @@ export function fetchReports(): Promise<Report[]> {
   return request<Report[]>('/reports');
 }
 
+export function fetchReport(id: string): Promise<Report> {
+  return request<Report>(`/reports/${id}`);
+}
+
 export function generateReport(type?: string): Promise<Report> {
   return request<Report>('/reports', {
     method: 'POST',

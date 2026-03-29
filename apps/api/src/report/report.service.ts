@@ -17,10 +17,16 @@ export class ReportService {
   ) {}
 
   async generate(type = 'daily'): Promise<ReportResponseDto> {
+    const reportDate = new Date().toISOString().split('T')[0];
+    const date = type === 'daily' ? reportDate : undefined;
     const { data: properties, total } = await this.propertyService.findAll(
       1,
       1000,
+      undefined,
+      undefined,
+      date,
     );
+    const { total: totalOverall } = await this.propertyService.findAll(1, 1);
 
     const locationCounts: Record<string, number> = {};
     for (const p of properties) {
@@ -30,9 +36,10 @@ export class ReportService {
     }
 
     const lines = [
-      `Property Report — ${new Date().toISOString().split('T')[0]}`,
+      `Property Report — ${reportDate}`,
       '='.repeat(40),
-      `Total Listings: ${total}`,
+      `Total Listings: ${totalOverall}`,
+      ...(type === 'daily' ? [`Number of Listings on ${reportDate}: ${total}`] : []),
       '',
       'Locations:',
       ...Object.entries(locationCounts).map(
@@ -68,6 +75,18 @@ export class ReportService {
       type: r.type,
       createdAt: r.createdAt,
     }));
+  }
+
+  async findOne(id: string): Promise<ReportResponseDto> {
+    const report = await this.reportRepo.findOne({ where: { id } });
+    if (!report) throw new NotFoundException('Report not found');
+    return {
+      id: report.id,
+      name: report.name,
+      type: report.type,
+      createdAt: report.createdAt,
+      content: report.content,
+    };
   }
 
   async download(id: string): Promise<{ filename: string; content: string }> {

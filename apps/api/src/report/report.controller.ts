@@ -37,6 +37,14 @@ export class ReportController {
     return this.reportService.generate(dto.type);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a report by ID' })
+  @ApiOkResponse({ type: ReportResponseDto })
+  @ApiNotFoundResponse({ description: 'Report not found' })
+  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ReportResponseDto> {
+    return this.reportService.findOne(id);
+  }
+
   @Get(':id/download')
   @ApiOperation({ summary: 'Download a report as text file' })
   @ApiNotFoundResponse({ description: 'Report not found' })
