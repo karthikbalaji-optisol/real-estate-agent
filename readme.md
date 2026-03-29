@@ -69,7 +69,7 @@ When running via `docker-compose`, the following ports are mapped to your host:
 
 - **Email Monitoring**: Actively tracks and processes unread (and targetted sent) emails for Gmail accounts dynamically loaded from the PostgreSQL database—all manageable via the UI.
 - **AI-Assisted Email Filtering & URL Extraction**: Parses incoming emails using `elsai-model` to reliably identify real-estate content and extract valid property URLs.
-- **Automated Property Scraping & Regex Extraction**: Gracefully handles real estate platforms (e.g., 99acres, SquareYards, Housing.com) to extract raw page text, which is then parsed using regular expressions on the NestJS backend to retrieve clean datasets containing BHK, bathrooms, and exact pricing.
+- **Automated Property Scraping & Regex Extraction**: Gracefully handles real estate platforms (e.g., magicbricks, SquareYards, Housing.com) to extract raw page text, which is then parsed using regular expressions on the NestJS backend to retrieve clean datasets containing BHK, bathrooms, and exact pricing.
 - **Dashboard & Reporting**: User interface capabilities to observe scraping results globally or per user, and generate or download structured daily status reports.
 
 ## Project Structure
