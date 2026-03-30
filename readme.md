@@ -16,7 +16,7 @@ The system utilizes an event-driven microservices architecture orchestrated with
 - **Backend API (`/apps/api`)**: NestJS application managing database operations, user authentication, and serving data to the frontend.
 - **Logger Service (`/apps/logger`)**: NestJS microservice handling centralized logging.
 - **Python Worker (`/python`)**: A background service that:
-  - Constantly monitors registered email inboxes (using `elsai-cloud` integration).
+  - Constantly monitors registered email inboxes.
   - Uses `elsai-model` (LLM) to intelligently classify real estate emails and extract property listing URLs.
 - **Infrastructure**:
   - **Kafka**: Message broker orchestrating events between services (`property.links`, `scrape.results`, `app.logs`, `email.check.trigger`).
