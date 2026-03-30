@@ -137,7 +137,6 @@ export default function EmailManagerPage() {
             <tr>
               <th className="px-6 py-3 text-left font-medium text-slate-500">Email</th>
               <th className="px-6 py-3 text-left font-medium text-slate-500">Provider</th>
-              <th className="px-6 py-3 text-left font-medium text-slate-500">Password</th>
               <th className="px-6 py-3 text-left font-medium text-slate-500">Status</th>
               <th className="px-6 py-3 text-left font-medium text-slate-500">Enabled</th>
               <th className="px-6 py-3 text-right font-medium text-slate-500">Actions</th>
@@ -154,7 +153,6 @@ export default function EmailManagerPage() {
                     {providerLabel(a.provider)}
                   </span>
                 </td>
-                <td className="px-6 py-3 font-mono text-slate-400">{a.maskedPassword}</td>
                 <td className="px-6 py-3">{validityBadge(a.isValid)}</td>
                 <td className="px-6 py-3">
                   <button
